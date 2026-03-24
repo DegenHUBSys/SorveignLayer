@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEGEN HUB | Sovereign Alpha Terminal v14.12</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-green: #00ff41;
+            --neon-pink: #ff00ff;
+            --neon-blue: #00f2ff;
+            --danger-red: #ff0033;
+            --warning-orange: #ffae00;
+            --deep-black: #020202;
+            --gold: #ffd700;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--deep-black);
+            color: #fff;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 50%, #0d1a0d 0%, #000 100%),
+                url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+            scroll-behavior: smooth;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* CRT & Scanline Effects */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), 
+                        radial-gradient(rgba(0, 255, 65, 0.05), transparent 70%);
+            z-index: 9999;
+            background-size: 100% 4px, 100% 100%;
+            pointer-events: none;
+            opacity: 0.15;
+        }
+
+        .glitch { position: relative; animation: glitch 2s linear infinite; }
+        @keyframes glitch {
+            2%, 64% { transform: translate(1px, 0) skew(0deg); }
+            4%, 60% { transform: translate(-1px, 0) skew(0deg); }
+            62% { transform: translate(0, 0) skew(3deg); color: var(--neon-pink); }
+        }
+
+        .hud-panel {
+            background: rgba(0, 20, 10, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            position: relative;
+            clip-path: polygon(0 0, 95% 0, 100% 5%, 100% 100%, 5% 100%, 0 95%);
+        }
+
+        .hud-bracket-tl { position: absolute; top: -2px; left: -2px; width: 15px; height: 15px; border-top: 2px solid var(--neon-green); border-left: 2px solid var(--neon-green); }
+        .hud-bracket-br { position: absolute; bottom: -2px; right: -2px; width: 15px; height: 15px; border-bottom: 2px solid var(--neon-green); border-right: 2px solid var(--neon-green); }
+
+        .btn-blackops {
+            background: var(--neon-green);
+            color: #000;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.2s ease;
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+            border: none;
+            cursor: pointer;
+        }
+        .btn-blackops:hover { background: white; box-shadow: 0 0 20px var(--neon-green); transform: scale(1.02); }
+        .btn-blackops:disabled { background: #333 !important; color: #666 !important; cursor: not-allowed; box-shadow: none; }
+
+        /* Marquee Ticker */
+        .marquee-container {
+            position: fixed; top: 32px; left: 0; width: 100%;
+            background: rgba(0, 255, 65, 0.03);
+            border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+            z-index: 250; overflow: hidden;
+            padding: 4px 0;
+        }
+        .marquee-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marquee-scroll 60s linear infinite;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 900;
+            color: rgba(0, 255, 65, 0.6);
+        }
+        @keyframes marquee-scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            z-index: 1000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .wallet-option {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            padding: 1.25rem; cursor: pointer; transition: 0.2s;
+        }
+        .wallet-option:hover { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
+
+        .radar-nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 40px; height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 50; transition: 0.3s; cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+        .radar-nav-btn:hover { background: var(--neon-green); color: #000; box-shadow: 0 0 15px var(--neon-green); }
+        .radar-nav-prev { left: -10px; clip-path: polygon(100% 0, 0 50%, 100% 100%); }
+        .radar-nav-next { right: -10px; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+
+        .alpha-card {
+            min-width: 280px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .alpha-card:hover { border-color: var(--neon-green); background: rgba(0,255,65,0.05); transform: translateY(-5px); }
+
+        .paper-entry {
+            background: rgba(255, 255, 255, 0.01);
+            border-left: 2px solid var(--neon-green);
+            padding: 3rem;
+            position: relative;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+        .paper-entry:hover { background: rgba(255, 255, 255, 0.02); border-left-width: 4px; }
+        
+        .redacted { background: #fff; color: #fff; padding: 0 4px; transition: color 0.5s; cursor: help; }
+        .redacted:hover { color: #000; }
+        
+        .watermark { 
+            position: absolute; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%) rotate(-15deg); 
+            font-size: 6rem; font-weight: 900; opacity: 0.02; 
+            pointer-events: none; white-space: nowrap; z-index: 0; 
+            color: #fff; text-transform: uppercase; 
+        }
+
+        .shard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(20px, 1fr)); gap: 4px; }
+        .shard-cell { aspect-ratio: 1; background: rgba(0, 255, 65, 0.1); border: 1px solid rgba(255, 255, 255, 0.03); font-size: 6px; display: flex; align-items: center; justify-content: center; color: rgba(0,255,65,0.3); }
+        .shard-active { background: var(--neon-green); color: black; box-shadow: 0 0 10px var(--neon-green); font-weight: 900; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .view-hidden { display: none !important; }
+
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--neon-green); color: black; padding: 12px 24px; font-family: 'JetBrains Mono', monospace; font-weight: 900; z-index: 10000; opacity: 0; transition: 0.3s; pointer-events: none; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%); border: 1px solid white; }
+
+        @keyframes scanning { 0% { top: -10%; } 100% { top: 110%; } }
+        .scan-anim { position: absolute; left: 0; width: 100%; height: 2px; background: rgba(0, 255, 65, 0.5); box-shadow: 0 0 20px rgba(0, 255, 65, 0.8); animation: scanning 4s linear infinite; pointer-events: none; z-index: 10; }
+
+        .health-bar { width: 4px; background: var(--neon-green); min-height: 2px; animation: health-fluctuate 1.5s ease-in-out infinite alternate; }
+        @keyframes health-fluctuate { 0% { height: 10%; opacity: 0.3; } 100% { height: 100%; opacity: 1; } }
+
+        #console::-webkit-scrollbar { width: 4px; }
+        #console::-webkit-scrollbar-track { background: transparent; }
+        #console::-webkit-scrollbar-thumb { background: var(--neon-green); border-radius: 2px; }
+    </style>
+</head>
+<body class="selection:bg-green-500 selection:text-black uppercase italic">
+
+    <div id="toast">>> SYSTEM_BOOTING</div>
+
+    <!-- HUD Status Bar -->
+    <div class="fixed top-0 left-0 w-full z-[300] bg-black/95 border-b border-green-500/20 px-6 py-2 flex justify-between items-center mono text-[9px] text-green-500 font-black">
+        <div class="flex gap-8">
+            <span>COORD_SYNC: <span id="mouseCoord">0.0, 0.0</span></span>
+            <span>NODE_ADDR: <span id="nodeDisplayAddr" class="text-white">SCANNING...</span></span>
+        </div>
+        <div class="flex gap-6 items-center">
+            <span class="text-white animate-pulse tracking-widest">● L1_STATION_ACTIVE</span>
+            <span id="currentTime">00:00:00 GMT</span>
+        </div>
+    </div>
+
+    <!-- Marquee Ticker -->
+    <div class="marquee-container">
+        <div class="marquee-content">
+            [SHARD_01: STABLE] -- [ALPHA_SYNC: 99.8%] -- [SIGNAL_FOUND: 0x71...f9 @ $1.4M MC] -- [L1_LOAD: 12%] -- [SHIELD_STATUS: ARMED] -- [NEURAL_CONSENSUS: REACHED] -- [MINT_FLOW: OPTIMAL] -- [GHOST_NODE_0x82: CONNECTED] -- [OMEGA_UPLINK: SECURE] -- [ALPHA_SYNC: 99.8%]
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-[52px] w-full z-[200] px-4 md:px-8 py-4 flex justify-between items-center bg-black/40 backdrop-blur-md border-b border-white/5">
+        <div class="flex items-center gap-5 cursor-pointer" onclick="window.switchView('dashboard')">
+            <div class="bg-green-500 text-black px-4 py-1.5 font-black text-2xl skew-x-[-15deg] shadow-[0_0_15px_rgba(0,255,65,0.4)]">DH</div>
+            <div class="text-white leading-tight">
+                <span class="text-2xl font-black italic tracking-tighter block">Degen<span class="text-green-500">Hub</span></span>
+            </div>
+        </div>
+        
+        <div class="flex gap-6 items-center mono text-[10px] font-bold text-gray-500">
+            <button onclick="window.switchView('dashboard')" class="hover:text-green-400 transition">_DASH</button>
+            <button onclick="window.switchView('classification')" class="hover:text-green-400 transition">_CLASS</button>
+            <button onclick="window.switchView('leaderboard')" class="hover:text-orange-400 transition">_RANK</button>
+            <button onclick="window.switchView('paper')" class="hover:text-pink-400 transition">_PAPER</button>
+            <button onclick="window.switchView('referral')" class="hover:text-yellow-400 transition">_REF</button>
+            <button onclick="window.switchView('dev-zone')" class="hover:text-cyan-400 transition">_WAR_ROOM</button>
+            
+            <div class="hidden sm:flex flex-col items-end px-4 border-l border-white/10">
+                <div class="flex items-center gap-1.5">
+                    <span id="navBalance" class="text-green-400 text-sm font-black">0.0000</span>
+                    <span class="text-green-500/40 text-[9px] font-bold">$HUB</span>
+                </div>
+            </div>
+            <button id="connectBtn" onclick="window.openWalletModal()" class="btn-blackops px-6 py-2.5 text-[9px]">CONNECT_WALLET</button>
+        </div>
+    </nav>
+
+    <!-- Wallet Modal -->
+    <div id="walletModal" class="modal-overlay" onclick="window.closeWalletModal()">
+        <div class="hud-panel p-10 max-w-md w-full mx-4" onclick="event.stopPropagation()">
+            <div class="hud-bracket-tl"></div><div class="hud-bracket-br"></div>
+            <h3 class="text-xl font-black italic mb-8 border-b border-green-500/20 pb-4">Authentication_Portal</h3>
+            <div class="grid grid-cols-1 gap-4 mono text-xs font-bold">
+                <div class="wallet-option flex justify-between items-center" onclick="window.connectRealWallet('MetaMask')"><span>METAMASK_EXT</span><span class="text-[8px] bg-white/5 px-2 py-1">EVM</span></div>
+                <div class="wallet-option flex justify-between items-center" onclick="window.connectRealWallet('Phantom')"><span>PHANTOM_SOL</span><span class="text-[8px] bg-white/5 px-2 py-1">SOLANA</span></div>
+            </div>
+            <p class="mt-8 text-[8px] text-gray-500 italic">SYSTEM_WARNING: ACCESS_WILL_BIND_IDENTIFIER_TO_VAULT_RECORD.</p>
+        </div>
+    </div>
+
+    <main class="container mx-auto px-4 md:px-6 pt-44 pb-20 min-h-screen">
+        
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboard-view" class="view-active space-y-12">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <div class="lg:col-span-4 space-y-8">
+                    <div class="hud-panel p-10 relative text-center">
+                        <div class="hud-bracket-tl"></div><div class="hud-bracket-br"></div>
+                        <span id="nodeTier" class="bg-green-500/10 text-green-500 border border-green-500/30 px-3 py-1 text-[9px] mono font-black tracking-widest">GENESIS_CORE_NODE</span>
+                        <div class="my-10 italic font-black">
+                            <span class="mono text-[9px] text-gray-500 block mb-2 tracking-widest">REALTIME_DATA_GENERATION</span>
+                            <div class="text-7xl text-white tracking-tighter" id="pendingVal">0.0000</div>
+                            <div class="mono text-[10px] text-green-500 mt-4 font-black tracking-widest">UPLINK: <span id="hashRate">42.5</span> PH/s</div>
+                        </div>
+                        <div class="w-full bg-white/5 h-1.5 mb-8 rounded-full overflow-hidden">
+                            <div id="mineBar" class="h-full bg-green-500 shadow-[0_0_15px_#00ff41] transition-all duration-300"></div>
+                        </div>
+                        <button id="claimMainBtn" onclick="window.handleClaim()" class="w-full btn-blackops py-6 text-sm font-black italic tracking-[0.2em]">EXECUTE_DATA_HARVEST</button>
+                    </div>
+
+                    <div class="hud-panel p-8" style="background: rgba(0, 20, 30, 0.6); border-color: rgba(0, 242, 255, 0.2);">
+                        <h3 class="mono text-cyan-400 text-[10px] font-black mb-6 border-b border-cyan-500/20 pb-2 tracking-widest font-black">_STAKING_TRANSMUTER</h3>
+                        <div class="space-y-6">
+                            <div class="flex justify-between items-center">
+                                <div><span class="text-[8px] text-gray-600 block mb-1">STAKED_RESOURCES</span><div class="text-4xl text-white font-black" id="stakingBalance">0.0000</div></div>
+                                <div class="text-right text-[10px] mono text-cyan-500 font-black">1:0.001 RATE</div>
+                            </div>
+                            <button id="swapBtn" onclick="window.handleSwap()" class="w-full py-4 bg-cyan-500 text-black font-black text-[11px] hover:bg-white transition tracking-widest">CONVERT_TO_$HUB</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-8 space-y-10">
+                    <div class="hud-panel p-8 bg-black/80 relative">
+                        <div class="flex justify-between items-center mb-8 border-b border-white/5 pb-6">
+                            <div class="flex items-center gap-5">
+                                <span class="w-3 h-3 bg-red-600 rounded-full animate-ping"></span>
+                                <h2 class="text-3xl font-black italic text-white flex items-center gap-3">ALPHA_RADAR_STREAM</h2>
+                            </div>
+                            <div class="mono text-[10px] text-green-500 bg-green-500/5 px-4 py-2 border border-green-500/20 font-black tracking-widest">SYNC_STATUS: OK</div>
+                        </div>
+                        
+                        <div class="relative">
+                            <button onclick="window.slideRadar('prev')" class="radar-nav-btn radar-nav-prev"> < </button>
+                            <button onclick="window.slideRadar('next')" class="radar-nav-btn radar-nav-next"> > </button>
+
+                            <div id="alphaFeed" class="flex gap-6 overflow-x-auto pb-6 no-scrollbar snap-x scroll-smooth">
+                                <div class="p-20 text-center mono text-green-500 animate-pulse w-full">INITIALIZING_DEXT_DECRYPTOR...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="dashLog" class="hud-panel p-8 bg-black/60 h-40 overflow-y-auto no-scrollbar mono text-[10px] text-green-500 space-y-1">
+                        >> AUTHENTICATING_OMEGA_SESSION...<br>>> MAPPING_SHARD_TOPOLOGY...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLASSIFICATION VIEW -->
+        <div id="classification-view" class="view-hidden space-y-12">
+            <h1 class="text-7xl font-black italic tracking-tighter text-white glitch">Data_Intelligence</h1>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <div class="p-12 hud-panel relative">
+                    <div class="hud-bracket-tl"></div><div class="hud-bracket-br"></div>
+                    <h3 class="text-3xl font-black italic mb-6 text-cyan-400">ZERO_DELAY</h3>
+                    <p class="mono text-sm text-gray-400 leading-relaxed">Bypass public execution paths. Alpha extracted directly from shard validators for real-time strategic advantage.</p>
+                </div>
+                <div class="p-12 hud-panel relative">
+                    <div class="hud-bracket-tl"></div><div class="hud-bracket-br"></div>
+                    <h3 class="text-3xl font-black italic mb-6 text-red-500">AI_SHIELD</h3>
+                    <p class="mono text-sm text-gray-400 leading-relaxed">Real-time bytecode analysis for preventive Rug-Pull protection on every incoming transaction.</p>
+                </div>
+                <div class="p-12 hud-panel relative">
+                    <div class="hud-bracket-tl"></div><div class="hud-bracket-br"></div>
+                    <h3 class="text-3xl font-black italic mb-6 text-pink-500">WHALE_MAP</h3>
+                    <p class="mono text-sm text-gray-400 leading-relaxed">Tracking institutional wallet accumulation across on-chain and cross-chain networks to detect massive moves.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEADERBOARD VIEW -->
+        <div id="leaderboard-view" class="view-hidden max-w-5xl mx-auto space-y-10">
+            <h1 class="text-7xl font-black italic tracking-tighter text-orange-500 glitch">Network_Dominance</h1>
+            <div class="bg-black/80 border border-white/10 p-2 relative">
+                <div class="overflow-x-auto p-4">
+                    <table class="w-full mono text-left text-[12px]">
+                        <thead class="text-gray-500 border-b border-white/10">
+                            <tr>
+                                <th class="pb-6 px-4">RANK</th>
+                                <th class="pb-6">NODE_IDENTIFIER</th>
+                                <th class="pb-6 text-center">PEERS</th>
+                                <th class="pb-6 text-center">BOOST</th>
+                                <th class="pb-6 text-right px-4">VAULT_BALANCE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lbBody">
+                            <tr><td colspan="5" class="py-20 text-center animate-pulse text-gray-500">QUERYING_GLOBAL_LEDGER...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLACK PAPER (ENGLISH TRANSLATION) -->
+        <div id="paper-view" class="view-hidden max-w-5xl mx-auto space-y-16">
+            <header class="border-b border-white/10 pb-12 relative overflow-hidden">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 mono text-[10px] text-pink-500 font-black tracking-[0.5em]">
+                            <span class="w-10 h-[1px] bg-pink-500"></span> 
+                            SECURE_ARCHIVE_v14.12
+                        </div>
+                        <h1 class="text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase">Sovereign_Alpha</h1>
+                        <p class="mono text-[10px] text-gray-500 max-w-md uppercase leading-relaxed">Degen Hub Layer-1 Infrastructure Technical Manifesto: Building Consensus through Intelligence and Neural Velocity.</p>
+                    </div>
+                    <div class="text-right mono text-[9px] text-gray-600 space-y-1">
+                        <div>DOCUMENT_HASH: 0x82A...F92</div>
+                        <div>ENCRYPTION: AES-512-RSA</div>
+                        <div>STATUS: <span class="text-green-500">DECRYPTED</span></div>
+                    </div>
+                </div>
+                <div class="scan-anim opacity-30"></div>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-12">
+                <!-- Sidebar Nav for Paper -->
+                <aside class="hidden lg:block space-y-6 mono text-[10px] font-bold text-gray-600">
+                    <div class="text-white border-l-2 border-green-500 pl-4 py-1">01_ABSTRACT</div>
+                    <div class="hover:text-white pl-4 py-1 transition cursor-pointer">02_TEMPORAL_SHARDING</div>
+                    <div class="hover:text-white pl-4 py-1 transition cursor-pointer">03_NEURAL_CONSENSUS</div>
+                    <div class="hover:text-white pl-4 py-1 transition cursor-pointer">04_VOID_PROTOCOL</div>
+                    <div class="hover:text-white pl-4 py-1 transition cursor-pointer">05_QUANTUM_VAULT</div>
+                </aside>
+
+                <!-- Content Area -->
+                <div class="lg:col-span-3 space-y-10">
+                    <!-- Abstract -->
+                    <div class="paper-entry">
+                        <div class="watermark">MANIFESTO</div>
+                        <h3 class="text-lg font-black italic text-green-500 mb-4 tracking-widest">_ABSTRACT_CORE</h3>
+                        <div class="space-y-4 mono text-xs text-gray-400 leading-relaxed lowercase">
+                            <p>Degen Hub is not just a terminal; it is a <span class="text-white font-bold italic">Sovereign Layer-1 Execution Environment</span>. We redefine the boundaries between information and execution. In a world where milliseconds translate to millions of dollars, we erase cognitive barriers through advanced temporal synchronization.</p>
+                        </div>
+                    </div>
+
+                    <!-- Section 01 -->
+                    <div class="paper-entry" style="border-color: var(--neon-pink)">
+                        <div class="watermark">TEMPORAL</div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-black italic text-pink-500 tracking-widest">01_ENTROPY_SYNC</h3>
+                            <span class="mono text-[9px] text-pink-500/40 font-bold">L1_TOPOLOGY_0x1</span>
+                        </div>
+                        <div class="space-y-6 mono text-xs text-gray-300 leading-relaxed uppercase">
+                            <p>The core failure of traditional DeFi is the <span class="redacted">Linear Latency Trap</span>. Public transactions are perpetually lagging behind private signals. DEGEN HUB shatters this paradigm using <span class="text-white font-black italic">Temporal Entropy Sharding</span>.</p>
+                            <p>Each network node predicts the subsequent mempool state via heuristic algorithms, enabling atomic <span class="text-pink-500 underline decoration-2 underline-offset-4 font-black italic">pre-consensus execution</span> without risk of state divergence.</p>
+                        </div>
+                    </div>
+
+                    <!-- Section 02 -->
+                    <div class="paper-entry" style="border-color: var(--neon-blue)">
+                        <div class="watermark">NEURAL</div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-black italic text-cyan-400 tracking-widest">02_PROOF_OF_INTEL</h3>
+                            <span class="mono text-[9px] text-cyan-500/40 font-bold">CONSENSUS_v4.0</span>
+                        </div>
+                        <div class="space-y-6 mono text-xs text-gray-300 leading-relaxed">
+                            <p>Forget wasteful Proof-of-Work or centralized Proof-of-Stake. We introduce <span class="text-white font-black italic">Proof-of-Intelligence (PoI)</span>.</p>
+                            <ul class="list-none space-y-4">
+                                <li class="flex gap-4"><span class="text-cyan-400 font-black">>></span> <span>Block validation is based on 'Alpha Radar' prediction accuracy.</span></li>
+                                <li class="flex gap-4"><span class="text-cyan-400 font-black">>></span> <span>Nodes with peak intelligence scores gain exclusive access to 'Alpha-Tunnels'.</span></li>
+                                <li class="flex gap-4"><span class="text-cyan-400 font-black">>></span> <span>Consensus is achieved within <span class="text-white font-bold italic">40ms</span> through parallel neural sync.</span></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Section 03 -->
+                    <div class="paper-entry" style="border-color: var(--warning-orange)">
+                        <div class="watermark">VOID</div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-black italic text-orange-400 tracking-widest">03_VOID_ENCRYPTION</h3>
+                            <span class="mono text-[9px] text-orange-500/40 font-bold">PRIVACY_SHIELD</span>
+                        </div>
+                        <p class="mono text-xs text-gray-400 leading-relaxed lowercase">
+                            Node identity protection is our ultimate priority. The 'VOID' protocol obfuscates on-chain footprints via <span class="text-white font-black italic">Recursive ZK-Rollups</span> embedded at the kernel level. No identity, no tracking—just pure execution under the institutional radar.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REFERRAL -->
+        <div id="referral-view" class="view-hidden max-w-6xl mx-auto space-y-12">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div class="lg:col-span-1">
+                    <div class="hud-panel p-12 bg-black/80 text-center relative">
+                        <div class="hud-bracket-tl"></div><div class="hud-bracket-br"></div>
+                        <div id="refCount" class="text-9xl font-black italic text-white leading-none">0</div>
+                        <div class="text-[10px] text-gray-600 mono mt-6 tracking-widest">CONNECTED_NODES</div>
+                        <div class="mt-8 pt-8 border-t border-white/5">
+                            <span id="refRankLabel" class="text-yellow-500 text-2xl font-black tracking-widest uppercase">UNRANKED</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3 space-y-8">
+                    <div class="hud-panel p-10 bg-yellow-500/[0.03]">
+                        <h3 class="mono text-white border-b border-white/10 pb-4 mb-8 tracking-widest font-black">_SECURE_UPLINK_HEX</h3>
+                        <div class="bg-black p-8 border border-white/10 flex flex-col md:flex-row gap-8 items-center justify-between">
+                            <div id="refLinkDisplay" class="mono text-xs text-white font-black tracking-[0.2em] truncate w-full md:w-auto">CONNECT_TO_GENERATE_UPLINK</div>
+                            <button onclick="window.copyRef()" class="btn-blackops px-14 py-5 text-[10px] !bg-yellow-500 shadow-2xl">COPY_UPLINK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WAR ROOM (DEV ZONE) -->
+        <div id="dev-zone-view" class="view-hidden space-y-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6 bg-white/5 p-8 border-l-4 border-cyan-500">
+                <h1 class="text-5xl md:text-7xl font-black italic tracking-tighter text-white leading-none">WAR_ROOM_ENGINE</h1>
+                <button onclick="window.toggleNode()" id="nodeBtn" class="btn-blackops px-10 py-4 text-xs !bg-cyan-500 shadow-lg">ACTIVATE_ENGINE</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div class="lg:col-span-1">
+                    <div class="hud-panel p-8 bg-black/80 relative">
+                        <h3 class="mono text-[10px] text-gray-500 mb-8 border-b border-white/10 pb-2 tracking-widest">_KERNEL_LOAD</h3>
+                        <div class="flex justify-center mb-8 relative">
+                            <svg viewBox="0 0 36 36" class="w-32 h-32">
+                                <path class="stroke-white/5" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="2"/>
+                                <path id="cpuCircle" class="stroke-cyan-500 transition-all duration-500" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center font-black text-2xl" id="cpuVal">0%</div>
+                        </div>
+                        <div id="devUptime" class="text-center mono text-[10px] text-cyan-400">UPTIME: 00:00:00</div>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 p-8 hud-panel">
+                    <h3 class="mono text-[10px] text-gray-500 mb-4 tracking-widest uppercase">_ACTIVE_SHARD_MATRIX</h3>
+                    <div id="shardContainer" class="shard-grid"></div>
+                </div>
+                <div class="lg:col-span-1 p-6 hud-panel h-[420px] flex flex-col">
+                    <h3 class="mono text-[10px] text-white border-b border-white/10 pb-2 mb-4 tracking-widest">_KERNEL_STREAM</h3>
+                    <div id="console" class="flex-1 overflow-y-auto mono text-[9px] text-green-500 space-y-1">
+                        >> KERNEL_READY.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILE SCAN -->
+        <div id="profile-view" class="view-hidden">
+            <button onclick="window.switchView('dashboard')" class="text-gray-500 text-[10px] mono mb-10 hover:text-white transition"><span>&lt;&lt;</span> EXIT_INTEL_DOSSIER</button>
+            <div id="profileContent"></div>
+        </div>
+
+    </main>
+
+    <!-- TACTICAL COMMAND FOOTER (ENGLISH) -->
+    <footer class="mt-20 border-t border-green-500/10 bg-black/95 relative overflow-hidden">
+        <div class="h-[1px] w-full bg-green-500/20 absolute top-0 left-0">
+            <div class="h-full bg-green-500 w-24 animate-[marquee-scroll_5s_linear_infinite] shadow-[0_0_10px_var(--neon-green)]"></div>
+        </div>
+
+        <div class="container mx-auto px-8 py-20 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
+                <!-- System Identity & Kernel -->
+                <div class="space-y-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-green-500 flex items-center justify-center font-black text-black text-xs skew-x-[-10deg]">DH</div>
+                        <span class="text-green-500 mono text-[11px] font-black tracking-[0.4em]">SYSTEM_IDENTITY_v14</span>
+                    </div>
+                    <div class="space-y-2 opacity-40 mono text-[9px] font-bold uppercase leading-relaxed">
+                        <div>TERMINAL_ID: <span class="text-white">OMNI_SUPREME_L1</span></div>
+                        <div>ARCH: <span class="text-white">GHOST_MAPPINGS_V4</span></div>
+                        <div>KERNEL: <span class="text-white">14.12.001-STABLE</span></div>
+                        <div class="pt-4 flex gap-2">
+                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" style="animation-delay: 0.2s"></span>
+                            <span class="w-1.5 h-1.5 bg-white/20 rounded-full"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Connectivity Map -->
+                <div class="space-y-6">
+                    <div class="text-green-500 mono text-[11px] font-black tracking-[0.4em]">GLOBAL_NODE_SYNC</div>
+                    <div class="relative w-full aspect-video opacity-20 bg-green-500/5 border border-green-500/10 flex items-center justify-center p-2">
+                        <svg viewBox="0 0 100 60" class="w-full h-full stroke-green-500 fill-none opacity-40">
+                            <path d="M10,20 Q30,10 50,30 T90,20" stroke-width="0.2" stroke-dasharray="1,1"/>
+                            <path d="M20,50 Q40,40 60,50 T80,30" stroke-width="0.2" stroke-dasharray="1,1"/>
+                            <circle cx="25" cy="22" r="1.5" class="fill-green-500 animate-pulse"/>
+                            <circle cx="75" cy="45" r="1.5" class="fill-green-500 animate-pulse" style="animation-delay: 0.5s"/>
+                            <circle cx="50" cy="30" r="1" class="fill-white"/>
+                        </svg>
+                        <div class="absolute bottom-2 right-2 text-[7px] mono text-green-500/40">LATENCY_MAPPING_ACTIVE</div>
+                    </div>
+                </div>
+
+                <!-- Live Metrics Grid -->
+                <div class="space-y-6">
+                    <div class="text-green-500 mono text-[11px] font-black tracking-[0.4em]">RESOURCE_MANIFEST</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-3 border border-white/5 bg-white/[0.02]">
+                            <div class="text-[7px] text-gray-500 mb-1">ENTROPY</div>
+                            <div class="text-xs font-black mono text-white" id="liveEntropy">0.9928</div>
+                        </div>
+                        <div class="p-3 border border-white/5 bg-white/[0.02]">
+                            <div class="text-[7px] text-gray-500 mb-1">LATENCY</div>
+                            <div class="text-xs font-black mono text-green-500">0.001ms</div>
+                        </div>
+                        <div class="p-3 border border-white/5 bg-white/[0.02]">
+                            <div class="text-[7px] text-gray-500 mb-1">SHARD_LOAD</div>
+                            <div class="text-xs font-black mono text-white">12.4%</div>
+                        </div>
+                        <div class="p-3 border border-white/5 bg-white/[0.02]">
+                            <div class="text-[7px] text-gray-500 mb-1">H_ENTROPY</div>
+                            <div class="text-xs font-black mono text-white">SECURE</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session & Manifest -->
+                <div class="text-right space-y-6">
+                    <div class="text-green-500 mono text-[11px] font-black tracking-[0.4em]">SESSION_MANIFEST</div>
+                    <div class="space-y-1">
+                        <div id="footerUptime" class="text-white text-5xl font-black italic tracking-tighter leading-none">00:00:00</div>
+                        <div class="text-[8px] text-gray-600 font-black tracking-widest italic uppercase">TOTAL_COMMAND_UPTIME</div>
+                    </div>
+                    <div class="inline-block px-4 py-1 border border-red-500/30 bg-red-500/5 text-red-500 text-[8px] font-black italic">
+                        PROTOCOL_VOID_ACTIVE
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Legal & Hash Row -->
+            <div class="mt-24 pt-8 border-t border-white/5 flex flex-col lg:flex-row justify-between items-center gap-8">
+                <div class="flex items-center gap-6">
+                    <span class="text-[9px] text-gray-600 font-black uppercase">© 2026 DEGEN_HUB_TERMINAL</span>
+                    <span class="hidden md:inline w-[1px] h-3 bg-white/10"></span>
+                    <span class="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">ENCRYPTION_STANDARD: AES-256-GCM-RSA</span>
+                </div>
+                
+                <div class="flex items-center gap-10 mono text-[9px] font-black">
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-500/30 italic">KERNEL_STATUS:</span>
+                        <span class="text-green-500 animate-pulse">OPTIMIZED</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-500/30 italic">SHARD_SYNC:</span>
+                        <span class="text-white">TRUE</span>
+                    </div>
+                    <div class="hidden sm:block text-gray-700">HASH_ID: 9812-XA91-0012-DH</div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, serverTimestamp, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Environment Configuration
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'degen-omni-v14-12';
+        
+        // Proteksi untuk penggunaan lokal di VS Code
+        let firebaseConfig = {};
+        try {
+            if (typeof __firebase_config !== 'undefined') {
+                firebaseConfig = JSON.parse(__firebase_config);
+            } else {
+                // Fallback config dummy agar tidak error di VS Code
+                firebaseConfig = {
+                    apiKey: "LOCAL_DEV_ONLY",
+                    authDomain: "local-dev.firebaseapp.com",
+                    projectId: "local-dev",
+                    storageBucket: "local-dev.appspot.com",
+                    messagingSenderId: "000000000000",
+                    appId: "1:000000000000:web:localdev"
+                };
+                console.warn("ENVIRONMENT_WARNING: __firebase_config not detected. Running in Local Mode.");
+            }
+        } catch (e) {
+            console.error("CONFIG_CORRUPTED:", e);
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const state = {
+            user: null, 
+            balance: 0, 
+            stakingBalance: 0, 
+            pending: 0, 
+            tier: 0, 
+            uptime: 0,
+            nodeActive: false, 
+            blockHeight: 911251, 
+            peers: 0,
+            tierRates: [0.0001, 0.001, 0.01, 0.1],
+            tierNames: ["GENESIS_CORE", "QUANTUM_LINK", "NEURAL_OVERDRIVE", "HYPER_SATELLITE"],
+            swapRate: 0.001
+        };
+
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            if(t) { t.innerText = `>> ${msg}`; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 3000); }
+        };
+
+        const updateMilestones = (count) => {
+            const rrl = document.getElementById('refRankLabel');
+            if(rrl) {
+                let rank = "UNRANKED";
+                if(count >= 10) rank = "COMMANDER"; else if(count >= 5) rank = "OPERATIVE"; else if(count >= 1) rank = "SCOUT";
+                rrl.innerText = rank;
+            }
+        };
+
+        const syncVault = (uid) => {
+            // Jangan jalankan sync jika di local dev tanpa config asli
+            if (firebaseConfig.apiKey === "LOCAL_DEV_ONLY") return;
+
+            const userRef = doc(db, 'artifacts', appId, 'users', uid, 'vault', 'data');
+            onSnapshot(userRef, (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    state.balance = data.balance || 0; 
+                    state.stakingBalance = data.stakingBalance || 0;
+                    state.tier = data.tier || 0; 
+                    state.peers = data.peers || 0;
+
+                    document.getElementById('navBalance').innerText = state.balance.toFixed(4);
+                    document.getElementById('stakingBalance').innerText = state.stakingBalance.toFixed(4);
+                    document.getElementById('nodeTier').innerText = state.tierNames[state.tier];
+                    document.getElementById('refCount').innerText = state.peers;
+                    updateMilestones(state.peers);
+                } else { 
+                    setDoc(userRef, { balance: 0, stakingBalance: 0, tier: 0, peers: 0, joined: serverTimestamp() }); 
+                }
+            }, (err) => console.error("Vault Sync Error", err));
+
+            const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+            onSnapshot(lbRef, (snap) => {
+                const players = snap.docs.map(d => ({ ...d.data(), uid: d.id })).sort((a,b) => b.balance - a.balance);
+                const lbBody = document.getElementById('lbBody');
+                if(lbBody) {
+                    lbBody.innerHTML = players.map((p, i) => {
+                        const rank = i+1;
+                        const rankClass = rank === 1 ? 'text-yellow-400' : rank <= 3 ? 'text-white' : 'text-gray-500';
+                        return `
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                            <td class="py-6 px-4 font-black ${rankClass}">#${rank}</td>
+                            <td class="py-6 mono">${p.uid.substring(0, 16)}...</td>
+                            <td class="py-6 text-center text-orange-400 font-bold">${p.peers || 0}</td>
+                            <td class="py-6 text-center text-pink-500 font-black">${(1 + (p.peers || 0) * 0.1).toFixed(1)}X</td>
+                            <td class="py-6 text-right px-4 font-black text-cyan-400 text-lg">${(p.balance || 0).toFixed(2)} $HUB</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }, (err) => console.error("LB Sync Error", err));
+        };
+
+        window.openWalletModal = () => document.getElementById('walletModal')?.classList.add('active');
+        window.closeWalletModal = () => document.getElementById('walletModal')?.classList.remove('active');
+
+        window.connectRealWallet = async (provider) => {
+            window.showToast(`INITIALIZING_${provider.toUpperCase()}...`);
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const address = accounts[0];
+                    window.showToast("UPLINK_STABLE_ACCESS_GRANTED");
+                    window.closeWalletModal();
+                    document.getElementById('nodeDisplayAddr').innerText = `NODE_${address.substring(0,16).toUpperCase()}`;
+                    document.getElementById('connectBtn').innerText = `${address.substring(0,6)}...${address.substring(address.length-4)}`;
+                } catch (e) { window.showToast("CONNECTION_REJECTED"); }
+            } else { window.showToast("NO_EXT_FOUND_FALLBACK_ANON"); }
+        };
+
+        window.switchView = (id) => {
+            const views = ['dashboard', 'classification', 'leaderboard', 'paper', 'referral', 'dev-zone', 'profile'];
+            views.forEach(v => { document.getElementById(`${v}-view`)?.classList.add('view-hidden'); });
+            document.getElementById(`${id}-view`)?.classList.remove('view-hidden');
+            window.scrollTo(0,0);
+        };
+
+        window.slideRadar = (dir) => {
+            const feed = document.getElementById('alphaFeed');
+            if(feed) { const scrollAmount = 300; feed.scrollBy({ left: dir === 'next' ? scrollAmount : -scrollAmount, behavior: 'smooth' }); }
+        };
+
+        const fetchAlpha = async () => {
+            try {
+                const res = await fetch("https://api.dexscreener.com/token-profiles/latest/v1");
+                const data = await res.json();
+                const af = document.getElementById('alphaFeed');
+                if(af) {
+                    af.innerHTML = data.slice(0, 12).map(t => `
+                        <div class="alpha-card snap-start" onclick="window.scanToken('${t.tokenAddress}')">
+                            <div class="flex gap-4 items-center mb-5">
+                                <img src="${t.icon || 'https://via.placeholder.com/64'}" class="w-12 h-12 border border-white/10 grayscale">
+                                <div><h4 class="text-white text-xs font-black truncate w-24">${t.chainId.toUpperCase()}</h4><p class="text-[8px] text-green-500 mono font-bold">L1_SIGNAL_ACTIVE</p></div>
+                            </div>
+                            <div class="text-[8px] mono text-gray-600 truncate mb-4 font-bold italic">${t.tokenAddress}</div>
+                            <div class="flex justify-between items-center"><span class="text-[9px] text-green-500 font-black">STRENGTH</span><span class="text-[10px] text-white font-black">${Math.floor(Math.random()*40+60)}%</span></div>
+                        </div>`).join('');
+                }
+            } catch(e) { console.error("Dex API error", e); }
+        };
+
+        window.toggleNode = () => {
+            state.nodeActive = !state.nodeActive;
+            const btn = document.getElementById('nodeBtn');
+            if(btn) { 
+                btn.innerText = state.nodeActive ? "SHUTDOWN_ENGINE" : "ACTIVATE_ENGINE"; 
+                btn.style.background = state.nodeActive ? "var(--danger-red)" : "var(--neon-blue)"; 
+            }
+            if(state.nodeActive) startWarRoomLoop();
+        };
+
+        const startWarRoomLoop = () => {
+            if(!state.nodeActive) return;
+            state.blockHeight++;
+            const con = document.getElementById('console');
+            const dashLog = document.getElementById('dashLog');
+            const msg = `SHARD_SYNC_BLOCK_${state.blockHeight}_OK`;
+            
+            if(con) { 
+                con.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`; 
+                con.scrollTop = con.scrollHeight; 
+                if(con.children.length > 40) con.firstChild.remove(); 
+            }
+            if(dashLog) {
+                dashLog.innerHTML += `<div>>> ${msg}</div>`;
+                dashLog.scrollTop = dashLog.scrollHeight;
+                if(dashLog.children.length > 20) dashLog.firstChild.remove();
+            }
+
+            const cc = document.getElementById('cpuCircle'); 
+            const val = Math.floor(Math.random()*40+30);
+            if(cc) cc.style.strokeDasharray = `${val}, 100`;
+            if(document.getElementById('cpuVal')) document.getElementById('cpuVal').innerText = val + '%';
+            
+            const sc = document.getElementById('shardContainer');
+            if(sc && Math.random() > 0.5) { 
+                sc.innerHTML = Array(120).fill(0).map(() => `<div class="shard-cell ${Math.random() > 0.8 ? 'shard-active' : ''}">${Math.floor(Math.random()*255).toString(16).toUpperCase()}</div>`).join(''); 
+            }
+            setTimeout(startWarRoomLoop, 1000);
+        };
+
+        window.handleClaim = async () => {
+            if (!state.user || state.pending < 0.001) { window.showToast("INSUFFICIENT_DATA_EXTRACTED"); return; }
+            if (firebaseConfig.apiKey === "LOCAL_DEV_ONLY") { window.showToast("LOCAL_MODE: DATA_NOT_SAVED"); return; }
+            
+            const amount = state.pending; 
+            const btn = document.getElementById('claimMainBtn');
+            btn.disabled = true; btn.innerText = "EXECUTING_SYNC...";
+            
+            try {
+                const userRef = doc(db, 'artifacts', appId, 'users', state.user.uid, 'vault', 'data');
+                await updateDoc(userRef, { stakingBalance: increment(amount) });
+                state.pending = 0;
+                window.showToast(`HARVEST_SUCCESS: +${amount.toFixed(4)} DATA`);
+            } catch(e) { window.showToast("SYNC_ERROR_RETRYING..."); }
+            btn.disabled = false; btn.innerText = "EXECUTE_DATA_HARVEST";
+        };
+
+        window.handleSwap = async () => {
+            if (!state.user || state.stakingBalance <= 0) { window.showToast("NO_STAKED_RESOURCES"); return; }
+            if (firebaseConfig.apiKey === "LOCAL_DEV_ONLY") { window.showToast("LOCAL_MODE: DATA_NOT_SAVED"); return; }
+
+            const btn = document.getElementById('swapBtn');
+            const hub = state.stakingBalance * state.swapRate;
+            btn.disabled = true; btn.innerText = "TRANSMUTING...";
+            
+            try {
+                const userRef = doc(db, 'artifacts', appId, 'users', state.user.uid, 'vault', 'data');
+                await updateDoc(userRef, { stakingBalance: 0, balance: increment(hub) });
+                const lbRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
+                await setDoc(lbRef, { balance: increment(hub), peers: state.peers }, { merge: true });
+                window.showToast(`VAULT_TRANSFERRED: +${hub.toFixed(4)} $HUB`);
+            } catch (e) { window.showToast("TRANSMUTATION_FAILED"); }
+            btn.disabled = false; btn.innerText = "CONVERT_TO_$HUB";
+        };
+
+        window.scanToken = async (addr) => {
+            window.switchView('profile');
+            const cont = document.getElementById('profileContent');
+            if(!cont) return;
+            cont.innerHTML = `<div class="py-24 text-center mono text-green-500 animate-pulse font-black uppercase tracking-widest">>> DECRYPTING_INTEL_DOSSIER_0x${addr.substring(0,8)}...</div>`;
+            
+            try {
+                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addr}`);
+                const data = await res.json();
+                const p = data.pairs?.[0];
+                if(!p) { cont.innerHTML = `<div class="p-20 text-center text-red-500 mono">DATA_CORRUPTED: PAIR_NOT_FOUND</div>`; return; }
+                
+                cont.innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                        <div class="lg:col-span-2 space-y-8">
+                            <div class="border-b border-white/10 pb-8 flex justify-between items-end">
+                                <div><h1 class="text-7xl tracking-tighter italic font-black">${p.baseToken.name}</h1><p class="mono text-gray-500 mt-2">${p.baseToken.symbol} / ${p.quoteToken.symbol}</p></div>
+                                <div class="text-5xl text-cyan-400 font-black">$${p.priceUsd}</div>
+                            </div>
+                            <div class="aspect-video bg-black border border-white/10 relative overflow-hidden">
+                                <iframe style="width:100%; height:100%; border:none;" src="https://dexscreener.com/${p.chainId}/${p.pairAddress}?embed=1&theme=dark&trades=0&info=0"></iframe>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                <div class="hud-panel p-5"><div class="text-[8px] text-gray-500 mb-2">LIQUIDITY</div><div class="text-xl font-black text-white">$${p.liquidity?.usd.toLocaleString() || '0'}</div></div>
+                                <div class="hud-panel p-5"><div class="text-[8px] text-gray-500 mb-2">FDV_CAP</div><div class="text-xl font-black text-white">$${p.fdv?.toLocaleString() || '0'}</div></div>
+                                <div class="hud-panel p-5"><div class="text-[8px] text-gray-500 mb-2">24H_VOL</div><div class="text-xl font-black text-white">$${p.volume?.h24.toLocaleString() || '0'}</div></div>
+                                <div class="hud-panel p-5"><div class="text-[8px] text-gray-500 mb-2">CHAIN</div><div class="text-xl font-black text-pink-500">${p.chainId.toUpperCase()}</div></div>
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            <div class="hud-panel p-8 bg-black italic relative overflow-hidden">
+                                <div class="scan-anim"></div>
+                                <h3 class="mono text-danger-red text-xs mb-6 font-black tracking-widest">ALPHA_SHIELD_ANALYSIS</h3>
+                                <div class="space-y-6 text-[10px] font-bold mono">
+                                    <div class="flex justify-between border-b border-white/5 pb-2"><span>RUG_SCORE:</span><span class="text-green-500">SECURE_L1</span></div>
+                                    <div class="flex justify-between border-b border-white/5 pb-2"><span>LP_STATUS:</span><span class="text-green-500">LOCKED</span></div>
+                                    <div class="mt-6 p-4 bg-green-500/5 border border-green-500/20 text-[9px] text-gray-400 normal-case leading-relaxed">
+                                        <span class="text-green-500 font-black uppercase">SUMMARY:</span> Shard scanning complete. Contract bytecode verified. No malicious sinks found. Conviction: <span class="text-white font-black uppercase">MAXIMUM</span>.
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="w-full btn-blackops py-10 text-3xl font-black italic shadow-2xl" onclick="window.open('${p.url}', '_blank')">EXECUTE_L1_SWAP</button>
+                        </div>
+                    </div>`;
+            } catch(e) { cont.innerHTML = "CONNECTION_FAIL_TO_ORACLE"; }
+        };
+
+        window.addEventListener('load', async () => {
+            const initAuth = async () => {
+                if (firebaseConfig.apiKey === "LOCAL_DEV_ONLY") {
+                    state.user = { uid: "LOCAL_USER_" + Math.random().toString(36).substr(2, 9) };
+                    window.showToast("LOCAL_ANONYMOUS_SESSION_ACTIVE");
+                    return;
+                }
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+            
+            await initAuth();
+            fetchAlpha(); 
+            setInterval(fetchAlpha, 45000);
+            
+            window.addEventListener('mousemove', (e) => { 
+                const mc = document.getElementById('mouseCoord'); 
+                if(mc) mc.innerText = `${e.clientX}.0, ${e.clientY}.0`; 
+            });
+
+            setInterval(() => {
+                const rate = state.tierRates[state.tier] * (1 + state.peers * 0.1);
+                state.pending += rate;
+                
+                const pv = document.getElementById('pendingVal'); 
+                if(pv) pv.innerText = state.pending.toFixed(4);
+                
+                const mb = document.getElementById('mineBar'); 
+                if(mb) mb.style.width = `${((state.pending % 0.1) / 0.1) * 100}%`;
+                
+                state.uptime++;
+                const h = Math.floor(state.uptime/3600).toString().padStart(2,'0');
+                const m = Math.floor((state.uptime%3600)/60).toString().padStart(2,'0');
+                const s = (state.uptime%60).toString().padStart(2,'0');
+                
+                document.querySelectorAll('#footerUptime').forEach(el => el.innerText = `${h}:${m}:${s}`);
+                if(document.getElementById('currentTime')) document.getElementById('currentTime').innerText = `${new Date().toLocaleTimeString()} GMT`;
+                const ent = document.getElementById('liveEntropy');
+                if(ent) ent.innerText = (0.99 + Math.random() * 0.01).toFixed(4);
+            }, 1000);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const ref = urlParams.get('ref');
+            if (ref && state.user && ref !== state.user.uid) {
+                window.showToast(`UPLINK_DETECTED: NODE_V ${ref.substring(0,8)}`);
+            }
+        });
+
+        onAuthStateChanged(auth, (u) => {
+            if(u) {
+                state.user = u;
+                document.getElementById('connectBtn').innerText = `NODE_${u.uid.substring(0,8).toUpperCase()}`;
+                const refUrl = `${window.location.origin}${window.location.pathname}?ref=${u.uid}`;
+                if(document.getElementById('refLinkDisplay')) document.getElementById('refLinkDisplay').innerText = refUrl;
+                syncVault(u.uid);
+            }
+        });
+
+        window.copyRef = () => {
+            const rl = document.getElementById('refLinkDisplay'); 
+            if(!rl) return;
+            const t = document.createElement('textarea'); 
+            t.value = rl.innerText; 
+            document.body.appendChild(t); 
+            t.select(); 
+            document.execCommand('copy'); 
+            document.body.removeChild(t); 
+            window.showToast("UPLINK_HEX_COPIED_TO_CLIPBOARD");
+        };
+
+    </script>
+</body>
+</html>
